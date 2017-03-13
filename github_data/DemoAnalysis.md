@@ -87,7 +87,6 @@ This analysis shows that some students have a different GitHub account name than
 
 ``` r
 # Correct the repo links
-gitData <- CorrectRepoLink(gitData)  # see helper code file for method definition
 gitData[tolower(GitHubUser) != tolower(GitUserName), list(GitHubUser, GitUserName)]
 ```
 
@@ -112,11 +111,24 @@ commitCount <- commitCount[, list(NrOfUsers = .N), by = "NrOfCommits"]
 setkey(commitCount, NrOfCommits)
 ```
 
-With this data-mining operation, all commit related data is extracted from GitHub. Now we can show the number of users per amount of commits, for example
+With this data-mining operation, the following commit-related information is extracted from GitHub:
 
-``` r
-kable(commitCount)
-```
+| Information       | Sample                                   |
+|:------------------|:-----------------------------------------|
+| AccountURL        | <https://github.com/Jessica2106>         |
+| RepoNameCorrected | Assignments                              |
+| sha               | b5c7045c85bb56bbdcb18653e09504d0a6cd6fe0 |
+| author\_name      | Minke Remmerswaal                        |
+| author\_email     | <s.srisod@tilburguniversity.edu>         |
+| author\_when      | 2017-03-08 16:41:34                      |
+| committer\_name   | dark2paladin                             |
+| committer\_email  | <j.g.ordelmans@tilburguniversity.edu>    |
+| committer\_when   | 2017-03-08 16:35:02                      |
+| summary           | Initial commit                           |
+| message           | Initial commit                           |
+| Count             | 1                                        |
+
+Now we can show the number of users per amount of commits, for example
 
 |  NrOfCommits|  NrOfUsers|
 |------------:|----------:|
@@ -134,6 +146,6 @@ We can also show a plot of the density of commits as a function of time
 ggplot(gitCommits[Count > 0]) + geom_density(aes(committer_when))
 ```
 
-![](DemoAnalysis_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](DemoAnalysis_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
 This shows Professor Boone's initial commits and also the fact that a few students actualy committed before the first class (well done!).

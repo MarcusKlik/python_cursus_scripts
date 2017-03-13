@@ -23,18 +23,15 @@ GetCommitData <- function(x)
     sha = slot(x, "sha"),
     author_name = slot(slot(x, "author"), "name"),
     author_email = slot(slot(x, "author"), "email"),
-    author_when = slot(slot(slot(x, "author"), "when"), "time"),
-    committer_name = slot(slot(x, "author"), "name"),
-    committer_email = slot(slot(x, "author"), "email"),
-    committer_when = slot(slot(slot(x, "author"), "when"), "time"),
+    author_when = as.POSIXct(slot(slot(slot(x, "author"), "when"), "time"), origin = "1970-01-01", tz = "GMT"),
+    committer_name = slot(slot(x, "committer"), "name"),
+    committer_email = slot(slot(x, "committer"), "email"),
+    committer_when = as.POSIXct(slot(slot(slot(x, "committer"), "when"), "time"), origin = "1970-01-01", tz = "GMT"),
     summary = slot(x, "summary"),
     message = slot(x, "message")
   )
 }
 
-
-# repo = gitData[4, CorrectedRepo]
-# colnames(CloneAndExtract(gitData[4, CorrectedRepo], "tmp"))
 
 CloneAndExtract <- function(repo, tmpDir)
 {

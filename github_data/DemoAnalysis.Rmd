@@ -82,7 +82,6 @@ This analysis shows that some students have a different GitHub account name than
 
 ```{r, message=FALSE}
 # Correct the repo links
-gitData <- CorrectRepoLink(gitData)  # see helper code file for method definition
 gitData[tolower(GitHubUser) != tolower(GitUserName), list(GitHubUser, GitUserName)]
 ```
 
@@ -102,9 +101,23 @@ commitCount <- commitCount[, list(NrOfUsers = .N), by = "NrOfCommits"]
 setkey(commitCount, NrOfCommits)
 ```
 
-With this data-mining operation, all commit related data is extracted from GitHub. Now we can show the number of users per amount of commits, for example
+With this data-mining operation, the following commit-related information is extracted from GitHub (samples are unrelated):
 
-```{r, message=FALSE}
+```{r, message=FALSE, echo=FALSE}
+x <- data.table(
+  Information = colnames(gitCommits),
+  Sample = sapply(1:ncol(gitCommits), function(x)
+  {
+    as.character(gitCommits[sample(1:nrow(gitCommits), 1), x, with = FALSE][[1]])
+  }))
+
+kable(x)
+```
+
+
+Now we can show the number of users per amount of commits, for example
+
+```{r, message=FALSE, echo=FALSE}
 kable(commitCount)
 ```
 
