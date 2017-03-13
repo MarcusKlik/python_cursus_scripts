@@ -1,22 +1,20 @@
----
-output: github_document
----
 
-# A list with student data
+A list with student data
+========================
 
 Please make sure you have installed the following R packages to run this demo:
 
-* xlsx
-* data.table
-* knitr
-* ggplot2
-* git2r
+-   xlsx
+-   data.table
+-   knitr
+-   ggplot2
+-   git2r
 
 Our source data is an Excel file with names and GitHub repositories of students. This source file is not included in this repository for privacy reasons. To compile this Markdown script, make sure the source file is made available in directory 'sourcedata'.
 
 First we read the source data into a data.table:
 
-```{r, message=FALSE}
+``` r
 require(xlsx)
 require(data.table)
 
@@ -27,10 +25,9 @@ setDT(gitData)  # convert to data.table
 setnames(gitData, colnames(gitData), c("Time", "Name", "ID", "Mail", "Program", "Group", "GitHubUser", "ReadmeLink"))  # better column names
 ```
 
-We now have a data.table named 'gitData' that we can use for our analysis.
-First we check for multiple form submissions:
+We now have a data.table named 'gitData' that we can use for our analysis. First we check for multiple form submissions:
 
-```{r, message=FALSE}
+``` r
 require(knitr)
 
 gitData <- gitData[, Duplicates := .N, by = "GitHubUser"]
@@ -38,17 +35,21 @@ doubleCount <- gitData[, list(Number = .N), by = "Duplicates"]
 kable(doubleCount)
 ```
 
-So, `r doubleCount[Duplicates>1, sum(Number)]` students submitted the form more than once. To correct for this, we use the latest submitted form as the correct one, leaving `r length(unique(gitData[, GitHubUser]))` unique GitHub users to work with:
+|  Duplicates|  Number|
+|-----------:|-------:|
+|           1|      86|
+|           2|      14|
 
-```{r, message=FALSE}
+So, 14 students submitted the form more than once. To correct for this, we use the latest submitted form as the correct one, leaving 93 unique GitHub users to work with:
+
+``` r
 setkey(gitData, Time)  # order by time
 gitData <- gitData[, .SD[.N], by = "GitHubUser"]
 ```
 
-
 From this data set we can already extract some interesting information:
 
-```{r, message=FALSE}
+``` r
 require(ggplot2)
 
 ggplot(gitData) +
@@ -56,9 +57,11 @@ ggplot(gitData) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate x-axis labels
 ```
 
+![](DemoAnalysis_files/figure-markdown_github/unnamed-chunk-4-1.png)
+
 Also, we have different types of email addresses in our lecture group:
 
-```{r, message=FALSE, results='hide'}
+``` r
 source("DemoAnalysis.R")  # some helper methods defined in companion code file
 
 gitData[, MailType := MailType(Mail)]
@@ -66,29 +69,36 @@ gitData[, MailType := MailType(Mail)]
 ggplot(gitData) + geom_bar(aes(MailType, fill = Group))
 ```
 
+![](DemoAnalysis_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
 Apparently, some groups are using the 'uvt.nl' email type more often than others.
 
-# Git accounts
+Git accounts
+============
 
-Now we get to the more challenging part of the analysis; analysing the Git accounts.
-To do that, we need a clean link to the students git repository, for which we need some work:
+Now we get to the more challenging part of the analysis; analysing the Git accounts. To do that, we need a clean link to the students git repository, for which we need some work:
 
-```{r, message=FALSE}
+``` r
 # Correct the repo links
 gitData <- CorrectRepoLink(gitData)  # see helper code file for method definition
 ```
 
 This analysis shows that some students have a different GitHub account name than supplied in the form. These acounts will be excluded from the analysis (remove for privacy?):
 
-```{r, message=FALSE}
+``` r
 # Correct the repo links
 gitData <- CorrectRepoLink(gitData)  # see helper code file for method definition
 gitData[tolower(GitHubUser) != tolower(GitUserName), list(GitHubUser, GitUserName)]
 ```
 
+    ##        GitHubUser  GitUserName
+    ## 1:      msuppliet     janboone
+    ## 2:      Nienked98     janboone
+    ## 3: Yana Van Limpt yanavanlimpt
+
 After this exercise, we clone each repository into a local directory and extract some 'commit' information from the clone:
 
-```{r, message=FALSE, results='hide'}
+``` r
 require(git2r)
 
 gitData <- gitData[tolower(GitHubUser) == tolower(GitUserName)]
@@ -104,15 +114,26 @@ setkey(commitCount, NrOfCommits)
 
 With this data-mining operation, all commit related data is extracted from GitHub. Now we can show the number of users per amount of commits, for example
 
-```{r, message=FALSE}
+``` r
 kable(commitCount)
 ```
 
+|  NrOfCommits|  NrOfUsers|
+|------------:|----------:|
+|            0|          2|
+|            1|         68|
+|            2|          8|
+|            3|          4|
+|            4|          1|
+|            8|          1|
+|            9|          1|
+
 We can also show a plot of the density of commits as a function of time
 
-```{r, message=FALSE}
+``` r
 ggplot(gitCommits[Count > 0]) + geom_density(aes(committer_when))
 ```
 
-This shows Professor Boone's initial commits and also the fact that a few students actualy committed before the first class (well done!).
+![](DemoAnalysis_files/figure-markdown_github/unnamed-chunk-10-1.png)
 
+This shows Professor Boone's initial commits and also the fact that a few students actualy committed before the first class (well done!).
