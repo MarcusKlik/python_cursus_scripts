@@ -1,0 +1,131 @@
+---
+output: github_document
+---
+
+# A list with student data
+
+Please make sure you have installed the following R packages to run this demo:
+
+* xlsx
+* data.table
+* knitr
+* ggplot2
+* git2r
+
+Our source data is an Excel file with names and GitHub repositories of students. This source file is not included in this repository for privacy reasons. To compile this Markdown script, make sure the source file is made available in directory 'sourcedata'.
+
+First we read the source data into a data.table:
+
+```{r, message=FALSE}
+require(xlsx)
+require(data.table)
+
+# Import source Excel file
+gitData <- read.xlsx2("sourcedata/Programming for Economists (Reacties).xlsx", 1, stringsAsFactors = FALSE)
+
+setDT(gitData)  # convert to data.table
+setnames(gitData, colnames(gitData), c("Time", "Name", "ID", "Mail", "Program", "Group", "GitHubUser", "ReadmeLink"))  # better column names
+```
+
+We now have a data.table named 'gitData' that we can use for our analysis.
+First we check for multiple form submissions:
+
+```{r, message=FALSE}
+require(knitr)
+
+gitData <- gitData[, Duplicates := .N, by = "GitHubUser"]
+doubleCount <- gitData[, list(Number = .N), by = "Duplicates"]
+kable(doubleCount)
+```
+
+So, `r doubleCount[Duplicates>1, sum(Number)]` students submitted the form more than once. To correct for this, we use the latest submitted form as the correct one, leaving `r length(unique(gitData[, GitHubUser]))` unique GitHub users to work with:
+
+```{r, message=FALSE}
+setkey(gitData, Time)  # order by time
+gitData <- gitData[, .SD[.N], by = "GitHubUser"]
+```
+
+
+From this data set we can already extract some interesting information:
+
+```{r, message=FALSE}
+require(ggplot2)
+
+ggplot(gitData) +
+  geom_bar(aes(Group, fill = Program)) +  # create bar chart
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate x-axis labels
+```
+
+Also, we have different types of email addresses in our lecture group:
+
+```{r, message=FALSE, results='hide'}
+source("DemoAnalysis.R")  # some helper methods defined in companion code file
+
+gitData[, MailType := MailType(Mail)]
+
+ggplot(gitData) + geom_bar(aes(MailType, fill = Group))
+```
+
+Apparently, some groups are using the 'uvt.nl' email type more often than others.
+
+# Git accounts
+
+Now we get to the more challenging part of the analysis; analysing the Git accounts.
+To do that, we need a clean link to the students git repository, for which we need some work:
+
+```{r, message=FALSE}
+# Correct the repo links
+gitData <- CorrectRepoLink(gitData)  # see helper code file for method definition
+```
+
+This analysis shows that some students have a different GitHub account name than supplied in the form. These acounts will be excluded from the analysis (remove for privacy?):
+
+```{r, message=FALSE}
+# Correct the repo links
+gitData[tolower(GitHubUser) != tolower(GitUserName), list(GitHubUser, GitUserName)]
+```
+
+After this exercise, we clone each repository into a local directory and extract some 'commit' information from the clone:
+
+```{r, message=FALSE, results='hide'}
+require(git2r)
+
+gitData <- gitData[tolower(GitHubUser) == tolower(GitUserName)]
+gitData <- gitData[, CorrectedRepo := paste(AccountURL, RepoNameCorrected, sep = "/")]
+
+gitCommits <- gitData[, CloneAndExtract(CorrectedRepo, tmpDir = "tmp"), by = "AccountURL,RepoNameCorrected"]
+gitCommits <- gitCommits[, Count := 1]
+gitCommits <- gitCommits[is.na(message), Count := 0]
+commitCount <- gitCommits[, list(NrOfCommits = sum(Count)), by = "AccountURL"]
+commitCount <- commitCount[, list(NrOfUsers = .N), by = "NrOfCommits"]
+setkey(commitCount, NrOfCommits)
+```
+
+With this data-mining operation, the following commit-related information is extracted from GitHub (samples are unrelated):
+
+```{r, message=FALSE, echo=FALSE}
+x <- data.table(
+  Information = colnames(gitCommits),
+  Sample = sapply(1:ncol(gitCommits), function(x)
+  {
+    as.character(gitCommits[sample(1:nrow(gitCommits), 1), x, with = FALSE][[1]])
+  }))
+
+kable(x)
+```
+
+
+Now we can show the number of users per amount of commits, for example
+
+```{r, message=FALSE, echo=FALSE}
+kable(commitCount)
+```
+
+We can also show a plot of the density of commits as a function of time
+
+```{r, message=FALSE}
+ggplot(gitCommits[Count > 0]) + geom_density(aes(committer_when))
+```
+
+This shows Professor Boone's initial commits and also the fact that a few students actualy committed before the first class (well done!).
+

@@ -1,0 +1,14 @@
+.Rproj.user
+*.Rhistory
+*.dll
+*.pdf
+*.o
+*.a
+*.gz
+*.txt
+*.rds
+*.zip
+*.Rproj
+*.so
+*.xlsx
+tmp/.git
